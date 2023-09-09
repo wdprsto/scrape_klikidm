@@ -24,7 +24,11 @@ options.add_experimental_option("detach", True)
 driver = webdriver.Chrome(executable_path=executable_path, options=options)
 wait = WebDriverWait(driver, 10)
 
-driver.get(f"https://www.klikindomaret.com/category/makanan")
+link_cat = {
+    'makanan': 'https://www.klikindomaret.com/category/makanan',
+    'minuman': 'https://www.klikindomaret.com/category/beverage'
+}
+driver.get(link_cat['makanan'])
 
 """
 LIST SEMUA SUBKATEGORI
@@ -39,9 +43,9 @@ beautifulSoupText = BeautifulSoup(html, "html.parser")
 
 for sub_cat in beautifulSoupText.select('div[class*="section-kategori"]'):
     # try:
-        subcat_data = sub_cat.select('div[class*="headline"]')[0].find('a')
-        sub_cat_list[subcat_data.text] = subcat_data.get('href')
-    # except: 
+    subcat_data = sub_cat.select('div[class*="headline"]')[0].find('a')
+    sub_cat_list[subcat_data.text] = subcat_data.get('href')
+    # except:
     #     continue
 
 # print(sub_cat_list)
@@ -50,7 +54,7 @@ INITIALISASI CSV PENAMPUNG
 """
 with open(CSV_FILE_NAME, "a", newline='') as csv_file:
     writer = csv.writer(csv_file)
-    writer.writerow(['prod_name','prod_cat','prod_link'])
+    writer.writerow(['prod_name', 'prod_cat', 'prod_link'])
 
 """
 ITERASI UNTUK TIAP SUB KATEGOIR
@@ -66,21 +70,24 @@ for sc_name, sc_link in sub_cat_list.items():
     sub_beautifulSoupText = BeautifulSoup(sub_html, "html.parser")
 
     # definisikan variabel penting
-    MAX_PAGE = sub_beautifulSoupText.select_one('select[class*="pagelist"] option:last-child').text # max page of the subcategory..
+    # max page of the subcategory..
+    MAX_PAGE = sub_beautifulSoupText.select_one(
+        'select[class*="pagelist"] option:last-child').text
     # selector can be modified to get specific element inside it. co: div:nth-of-type(2)
-    
+
     for idx in range(1, int(MAX_PAGE)+1):
-        if not idx == 1: 
+        if not idx == 1:
             driver.get(f"{sc_link}?page={idx}")
             sub_html = driver.page_source
 
             sub_beautifulSoupText = BeautifulSoup(sub_html, "html.parser")
 
-        items = sub_beautifulSoupText.select('div[class*="product-collection"] > div[class="item"]')
-        
+        items = sub_beautifulSoupText.select(
+            'div[class*="product-collection"] > div[class="item"]')
+
         for item in items:
             prod_link = item.select_one('a').get('href')
-            prod_name = item.find('div', attrs={'class':'title'}).text.strip()
+            prod_name = item.find('div', attrs={'class': 'title'}).text.strip()
             data.append((prod_name, sc_name, prod_link))
 
     # write to csv
@@ -89,3 +96,5 @@ for sc_name, sc_link in sub_cat_list.items():
         # The for loop
         for prod_name, prod_cat, prod_link in data:
             writer.writerow([prod_name, prod_cat, prod_link])
+
+    sleep(5)
